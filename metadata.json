@@ -1,0 +1,7 @@
+{
+  "name": "Milestones",
+  "description": "Task and time management tool for a freelance web developer with retail shifts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
