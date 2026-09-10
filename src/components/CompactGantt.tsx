@@ -122,7 +122,7 @@ export const CompactGantt: React.FC<CompactGanttProps> = ({
                         {p.name}
                       </span>
                       {p.atRisk && (
-                        <span className="rounded-full px-1.5 py-0.2 bg-red-100 text-red-700 text-[9px] font-sans font-semibold tracking-wide uppercase border border-red-200/50 shrink-0">
+                        <span className="rounded-full px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[9px] font-sans font-semibold tracking-wide uppercase border border-amber-200/50 shrink-0">
                           Collision
                         </span>
                       )}
@@ -143,13 +143,13 @@ export const CompactGantt: React.FC<CompactGanttProps> = ({
                       className="absolute top-0 bottom-0 bg-blue-600/[0.05] z-5 pointer-events-none"
                     />
 
-                    {/* Hard vertical tick at deadline (Red tick 3px wide for collision) */}
+                    {/* Hard vertical tick at deadline (Amber tick 3px wide for collision) */}
                     {hasDeadlineInView && p.atRisk && (
                       <div
                         style={{
                           left: `${leftPct + widthPct}%`,
                         }}
-                        className="absolute top-0 bottom-0 w-[3px] bg-red-600 rounded-full z-20 -translate-x-1/2 pointer-events-none"
+                        className="absolute top-0 bottom-0 w-[3px] bg-amber-500 rounded-full z-20 -translate-x-1/2 pointer-events-none"
                         title={`Deadline Collision: ${p.deadlineDateStr}`}
                       />
                     )}
@@ -190,7 +190,7 @@ export const CompactGantt: React.FC<CompactGanttProps> = ({
         <div className="h-7 px-4 bg-slate-50/80 border-t border-black/[0.05] flex items-center justify-between text-[11px] text-[#6B7280] shrink-0 select-none">
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-600" />
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
               <span>Collision Risk</span>
             </span>
             <span className="text-black/[0.1]">·</span>

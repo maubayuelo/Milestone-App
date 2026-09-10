@@ -308,7 +308,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="xl:static fixed right-0 top-0 bottom-0 w-[380px] max-w-[92vw] h-full z-40 xl:z-20 flex flex-col border-l border-black/[0.06] bg-white select-none shadow-2xl xl:shadow-none"
+      className="xl:sticky fixed right-0 top-0 bottom-0 xl:bottom-auto w-[380px] max-w-[92vw] h-screen z-40 xl:z-20 flex flex-col border-l border-black/[0.06] bg-white select-none shadow-2xl xl:shadow-none shrink-0 overflow-hidden"
     >
       {/* Drag & Drop Visual Overlay */}
       {isDraggingOver && (
@@ -424,16 +424,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       >
         {coachMode === 'today' ? (
           <>
-            {/* Shift Anchor Context */}
-            <div className="p-3 rounded-xl border border-[#E5E4E0] bg-[#FAF9F7] space-y-1">
-              <span className="text-[11px] uppercase font-medium text-[#787774] tracking-[0.08em]">
-                Current Shift Anchor
-              </span>
-              <p className="text-xs text-[#1A1918] leading-relaxed">
-                {capacity.fullSentence}
-              </p>
-            </div>
-
             {messages.map((msg) => {
               const isUser = msg.sender === 'user';
               if (isUser) {

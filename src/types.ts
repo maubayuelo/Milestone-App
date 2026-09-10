@@ -1,6 +1,6 @@
-export type ViewType = 'today' | 'calendar' | 'board' | 'timeline' | 'messages';
+export type ViewType = 'today' | 'calendar' | 'projects' | 'tasks' | 'timeline' | 'messages' | 'board';
 
-export type BoardColumnId = 
+export type TaskColumnId = 
   | 'backlog' 
   | 'todo' 
   | 'in_progress' 
@@ -11,12 +11,54 @@ export type BoardColumnId =
   | 'handoff'
   | 'paused';
 
+export type BoardColumnId = TaskColumnId;
+
+export interface ProjectCategory {
+  id: string;
+  name: string;
+  color: string;
+  badgeLetter: string;
+  description?: string;
+  icon?: string;
+  isTemplateCategory?: boolean;
+}
+
+export type CanonicalArea = 'Career' | 'Magneto' | 'Shamanicca' | 'Finances' | 'Health & Soul' | 'Reference' | 'Personal';
+
 export interface Project {
   id: string;
   name: string;
   client: string;
   scope: string;
+  categoryId?: string;
+  categoryName?: string;
+  area: CanonicalArea | string;
+  color?: string;
+  gradient?: string;
+  starred?: boolean;
+  pinned?: boolean;
+  isClosed?: boolean;
+  isArchived?: boolean;
+  lastViewedAt?: string;
+  createdAt?: string;
+  startAt?: string;
+  dueAt?: string;
+  hasCollision?: boolean;
 }
+
+export type ProjectStanding = {
+  project: Project;
+  committedMinutes: number;
+  completedMinutes: number;
+  progress: number;            // 0..1
+  nextTask: Task | null;
+  daysRemaining: number;
+  availableBeforeDue: number;  // minutes
+  risk: 'onTrack' | 'atRisk' | 'blocked' | 'noTasksLinked';
+  expectedProgress: number;    // 0..1, elapsed startAt → now over startAt → dueAt
+  paceDeltaMinutes: number;    // negative = behind pace
+  hasNoLinkedTasks?: boolean;
+};
 
 export interface Subtask {
   id: string;
@@ -70,8 +112,12 @@ export interface Task {
   customProperties?: TaskProperty[];
   actualMinutes?: number;
   actualDisplay?: string;
+  estimateMinutes?: number;
   rescheduleCount?: number;
-  blockedBy?: string;
+  blockedBy?: string[] | string;
+  pinned?: boolean;
+  dueAt?: string;
+  status?: 'queued' | 'in_progress' | 'done' | 'backlog' | string;
   pausedReviewDate?: string;
   pausedReassignProject?: string;
   waitingSentDaysAgo?: number;

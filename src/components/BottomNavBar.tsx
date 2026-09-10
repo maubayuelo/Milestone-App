@@ -1,10 +1,10 @@
 import React from 'react';
 import { 
   Calendar as CalendarIcon, 
-  MessageSquare, 
-  Kanban,
-  Sun,
-  CalendarRange
+  Kanban, 
+  Sun, 
+  CalendarRange,
+  Layers
 } from 'lucide-react';
 import { ViewType } from '../types';
 
@@ -17,7 +17,6 @@ interface BottomNavBarProps {
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   currentView,
   onViewChange,
-  onOpenCreate,
 }) => {
   return (
     <nav 
@@ -29,7 +28,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         <button
           id="nav-btn-today"
           onClick={() => onViewChange('today')}
-          className={`flex flex-col items-center justify-center py-1 px-3 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
             currentView === 'today'
               ? 'text-blue-600 font-semibold'
               : 'text-slate-500 hover:text-slate-800'
@@ -39,7 +38,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           <div className="w-6 h-6 flex items-center justify-center">
             <Sun className="w-5 h-5" strokeWidth={currentView === 'today' ? 2 : 1.75} />
           </div>
-          <span className={`text-[11px] font-medium mt-0.5 tracking-tight ${
+          <span className={`text-[10px] font-medium mt-0.5 tracking-tight ${
             currentView === 'today' ? 'text-blue-600' : 'text-slate-500'
           }`}>
             Today
@@ -50,7 +49,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         <button
           id="nav-btn-calendar"
           onClick={() => onViewChange('calendar')}
-          className={`flex flex-col items-center justify-center py-1 px-3 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
             currentView === 'calendar'
               ? 'text-blue-600 font-semibold'
               : 'text-slate-500 hover:text-slate-800'
@@ -60,39 +59,60 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           <div className="w-6 h-6 flex items-center justify-center">
             <CalendarIcon className="w-5 h-5" strokeWidth={currentView === 'calendar' ? 2 : 1.75} />
           </div>
-          <span className={`text-[11px] font-medium mt-0.5 tracking-tight ${
+          <span className={`text-[10px] font-medium mt-0.5 tracking-tight ${
             currentView === 'calendar' ? 'text-blue-600' : 'text-slate-500'
           }`}>
             Calendar
           </span>
         </button>
 
-        {/* 3. Board / Kanban */}
+        {/* 3. Projects button */}
+        <button
+          id="nav-btn-projects"
+          onClick={() => onViewChange('projects')}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
+            currentView === 'projects'
+              ? 'text-blue-600 font-semibold'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+          title="Projects"
+        >
+          <div className="w-6 h-6 flex items-center justify-center">
+            <Layers className="w-5 h-5" strokeWidth={currentView === 'projects' ? 2 : 1.75} />
+          </div>
+          <span className={`text-[10px] font-medium mt-0.5 tracking-tight ${
+            currentView === 'projects' ? 'text-blue-600' : 'text-slate-500'
+          }`}>
+            Projects
+          </span>
+        </button>
+
+        {/* 4. Tasks */}
         <button
           id="nav-btn-board"
           onClick={() => onViewChange('board')}
-          className={`flex flex-col items-center justify-center py-1 px-3 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
             currentView === 'board'
               ? 'text-blue-600 font-semibold'
               : 'text-slate-500 hover:text-slate-800'
           }`}
-          title="Kanban Board"
+          title="Tasks"
         >
           <div className="w-6 h-6 flex items-center justify-center">
             <Kanban className="w-5 h-5" strokeWidth={currentView === 'board' ? 2 : 1.75} />
           </div>
-          <span className={`text-[11px] font-medium mt-0.5 tracking-tight ${
+          <span className={`text-[10px] font-medium mt-0.5 tracking-tight ${
             currentView === 'board' ? 'text-blue-600' : 'text-slate-500'
           }`}>
-            Board
+            Tasks
           </span>
         </button>
 
-        {/* 4. Timeline */}
+        {/* 5. Timeline */}
         <button
           id="nav-btn-timeline"
           onClick={() => onViewChange('timeline')}
-          className={`flex flex-col items-center justify-center py-1 px-3 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 transition-colors duration-200 cursor-pointer min-w-[44px] min-h-[44px] rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none ${
             currentView === 'timeline'
               ? 'text-blue-600 font-semibold'
               : 'text-slate-500 hover:text-slate-800'
@@ -102,7 +122,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           <div className="w-6 h-6 flex items-center justify-center">
             <CalendarRange className="w-5 h-5" strokeWidth={currentView === 'timeline' ? 2 : 1.75} />
           </div>
-          <span className={`text-[11px] font-medium mt-0.5 tracking-tight ${
+          <span className={`text-[10px] font-medium mt-0.5 tracking-tight ${
             currentView === 'timeline' ? 'text-blue-600' : 'text-slate-500'
           }`}>
             Timeline

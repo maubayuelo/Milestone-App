@@ -1,8 +1,8 @@
-export type CanonicalArea = 'Career' | 'Magneto' | 'Shamanicca' | 'Wellness';
+export type CanonicalArea = 'Career' | 'Magneto' | 'Shamanicca' | 'Finances' | 'Health & Soul' | 'Reference' | 'Personal' | 'Wellness';
 
 export interface AreaStyleConfig {
   area: CanonicalArea;
-  letter: 'C' | 'M' | 'S' | 'W';
+  letter: string;
   leftBorderClass: string; // 3px left border
   tagClass: string;        // pastel fill of hue at 12%, darker version text, radius 999px, 11px semibold
   labelClass: string;      // colored label text
@@ -28,11 +28,17 @@ export function hexToRgba(hex: string, alpha: number): string {
 export function getCanonicalArea(rawArea?: string, rawProjectName?: string): CanonicalArea {
   const combined = `${rawArea || ''} ${rawProjectName || ''}`.toLowerCase();
   if (
+    combined.includes('montreal') ||
+    combined.includes('anormal') ||
+    combined.includes('colombia') ||
+    combined.includes('personal')
+  ) {
+    return 'Personal';
+  }
+  if (
     combined.includes('magneto') || 
-    combined.includes('agentic') || 
-    combined.includes('ai ') ||
-    combined.includes('trepied') ||
-    combined.includes('dangel')
+    combined.includes('jitani') ||
+    combined.includes('kio')
   ) {
     return 'Magneto';
   }
@@ -44,15 +50,29 @@ export function getCanonicalArea(rawArea?: string, rawProjectName?: string): Can
     return 'Shamanicca';
   }
   if (
+    combined.includes('finance') ||
+    combined.includes('tax') ||
+    combined.includes('budget')
+  ) {
+    return 'Finances';
+  }
+  if (
+    combined.includes('health') ||
+    combined.includes('soul') ||
     combined.includes('wellness') || 
     combined.includes('routine') || 
     combined.includes('rest') || 
     combined.includes('recovery') ||
-    combined.includes('stillness') ||
-    combined.includes('yoga') ||
-    combined.includes('groceries')
+    combined.includes('bullet journal')
   ) {
-    return 'Wellness';
+    return 'Health & Soul';
+  }
+  if (
+    combined.includes('reference') ||
+    combined.includes('docs') ||
+    combined.includes('sop')
+  ) {
+    return 'Reference';
   }
   return 'Career';
 }
@@ -94,10 +114,10 @@ export function getAreaStyle(rawArea?: string, rawProjectName?: string): AreaSty
         badgeBg15: 'bg-[#7C3AED]/[0.15]',
         badgeText: 'text-[#7C3AED]',
       };
-    case 'Wellness':
+    case 'Finances':
       return {
-        area: 'Wellness',
-        letter: 'W',
+        area: 'Finances',
+        letter: 'F',
         leftBorderClass: 'border-l-[3px] border-l-[#D97706]',
         tagClass: 'bg-[#D97706]/[0.12] text-[#B45309] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
         labelClass: 'text-[#D97706]',
@@ -110,6 +130,58 @@ export function getAreaStyle(rawArea?: string, rawProjectName?: string): AreaSty
         tintHover10: 'hover:bg-[#D97706]/[0.10]',
         badgeBg15: 'bg-[#D97706]/[0.15]',
         badgeText: 'text-[#D97706]',
+      };
+    case 'Health & Soul':
+    case 'Wellness':
+      return {
+        area: 'Health & Soul',
+        letter: 'H',
+        leftBorderClass: 'border-l-[3px] border-l-[#10B981]',
+        tagClass: 'bg-[#10B981]/[0.12] text-[#047857] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#10B981]',
+        outlineChipClass: 'bg-[#10B981]/[0.12] text-[#047857] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#10B981',
+        rgbValues: '16, 185, 129',
+        tintBg8: 'bg-[#10B981]/[0.08]',
+        tintBg10: 'bg-[#10B981]/[0.10]',
+        tintBg20: 'bg-[#10B981]/[0.20]',
+        tintHover10: 'hover:bg-[#10B981]/[0.10]',
+        badgeBg15: 'bg-[#10B981]/[0.15]',
+        badgeText: 'text-[#10B981]',
+      };
+    case 'Personal':
+      return {
+        area: 'Personal',
+        letter: 'P',
+        leftBorderClass: 'border-l-[3px] border-l-[#8B5CF6]',
+        tagClass: 'bg-[#8B5CF6]/[0.12] text-[#7C3AED] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#8B5CF6]',
+        outlineChipClass: 'bg-[#8B5CF6]/[0.12] text-[#7C3AED] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#8B5CF6',
+        rgbValues: '139, 92, 246',
+        tintBg8: 'bg-[#8B5CF6]/[0.08]',
+        tintBg10: 'bg-[#8B5CF6]/[0.10]',
+        tintBg20: 'bg-[#8B5CF6]/[0.20]',
+        tintHover10: 'hover:bg-[#8B5CF6]/[0.10]',
+        badgeBg15: 'bg-[#8B5CF6]/[0.15]',
+        badgeText: 'text-[#8B5CF6]',
+      };
+    case 'Reference':
+      return {
+        area: 'Reference',
+        letter: 'R',
+        leftBorderClass: 'border-l-[3px] border-l-[#64748B]',
+        tagClass: 'bg-[#64748B]/[0.12] text-[#475569] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#64748B]',
+        outlineChipClass: 'bg-[#64748B]/[0.12] text-[#475569] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#64748B',
+        rgbValues: '100, 116, 139',
+        tintBg8: 'bg-[#64748B]/[0.08]',
+        tintBg10: 'bg-[#64748B]/[0.10]',
+        tintBg20: 'bg-[#64748B]/[0.20]',
+        tintHover10: 'hover:bg-[#64748B]/[0.10]',
+        badgeBg15: 'bg-[#64748B]/[0.15]',
+        badgeText: 'text-[#64748B]',
       };
     case 'Career':
     default:

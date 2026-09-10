@@ -171,19 +171,19 @@ export const BoardView: React.FC<BoardViewProps> = ({
           </span>
         </div>
 
-        {/* Board scroll navigation arrows (44px touch targets) */}
+        {/* Column scroll navigation arrows (44px touch targets) */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => scrollBoard('left')}
             className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-black/[0.04] text-[#6B7280] hover:text-[#1A1D23] hover:bg-slate-50 transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
-            title="Scroll board left"
+            title="Scroll columns left"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => scrollBoard('right')}
             className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-black/[0.04] text-[#6B7280] hover:text-[#1A1D23] hover:bg-slate-50 transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
-            title="Scroll board right"
+            title="Scroll columns right"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

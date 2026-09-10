@@ -7,7 +7,8 @@ import {
   Command,
   PanelRightClose,
   PanelRightOpen,
-  HardDrive
+  HardDrive,
+  Layers
 } from 'lucide-react';
 import { ViewType } from '../types';
 
@@ -40,8 +41,13 @@ export const Navigation: React.FC<NavigationProps> = ({
       icon: <CalendarIcon className="w-4 h-4" strokeWidth={1.75} />,
     },
     {
+      id: 'projects',
+      label: 'Projects',
+      icon: <Layers className="w-4 h-4" strokeWidth={1.75} />,
+    },
+    {
       id: 'board',
-      label: 'Board',
+      label: 'Tasks',
       icon: <Kanban className="w-4 h-4" strokeWidth={1.75} />,
     },
     {
@@ -54,7 +60,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   return (
     <aside
       id="main-nav-rail"
-      className="hidden md:flex w-[88px] h-full z-20 flex-col items-center justify-between py-4 border-r border-black/[0.04] bg-white select-none shrink-0"
+      className="hidden md:flex w-[88px] sticky top-0 h-screen z-20 flex-col items-center justify-between py-4 border-r border-black/[0.04] bg-white select-none shrink-0"
     >
       {/* App Logo Mark */}
       <div className="flex flex-col items-center gap-6 w-full">

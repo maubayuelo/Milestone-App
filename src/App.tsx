@@ -7,11 +7,14 @@ import {
   BoardColumnId, 
   AttachedFile, 
   ExtractedShiftRow, 
-  ExtractedTaskRow,
-  ExternalCommitment
+  ExtractedTaskRow, 
+  ExternalCommitment,
+  Project,
+  ProjectCategory
 } from './types';
 import { 
   INITIAL_PROJECTS, 
+  INITIAL_CATEGORIES,
   INITIAL_TASKS, 
   INITIAL_COMMITMENTS, 
   INITIAL_AT_RISK, 
@@ -28,16 +31,18 @@ import { ProjectFilesModal } from './components/ProjectFilesModal';
 import { CalendarView } from './views/CalendarView';
 import { TodayView } from './views/TodayView';
 import { BoardView } from './views/BoardView';
+import { ProjectsView } from './views/ProjectsView';
 import { GanttTimeline } from './components/GanttTimeline';
 
 export default function App() {
-  // Desktop view routing: 'today' | 'calendar' | 'board' | 'timeline'
+  // Desktop view routing: 'today' | 'calendar' | 'projects' | 'board' | 'timeline'
   const [currentView, setCurrentView] = useState<ViewType>('today');
   const [chatCollapsed, setChatCollapsed] = useState<boolean>(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(INITIAL_PROJECTS[0].id);
   
   // Data states
-  const [projects] = useState(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [categories, setCategories] = useState<ProjectCategory[]>(INITIAL_CATEGORIES);
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [commitments, setCommitments] = useState<ExternalCommitment[]>(INITIAL_COMMITMENTS);
   const [atRiskItems, setAtRiskItems] = useState<AtRiskItem[]>(INITIAL_AT_RISK);
@@ -274,6 +279,66 @@ export default function App() {
     setChatMessages((prev) => [...prev, userMsg, replyMsg]);
   };
 
+  // Projects and categories handlers
+  const handleOpenBoardForProject = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setCurrentView('board');
+  };
+
+  const handleCreateProject = (newProjData: Omit<Project, 'id'>) => {
+    const newProject: Project = {
+      ...newProjData,
+      id: `proj-${Date.now()}`,
+    };
+    setProjects((prev) => [newProject, ...prev]);
+
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: `msg-proj-created-${Date.now()}`,
+        sender: 'assistant',
+        timestamp: timeStr,
+        text: `Created new board "${newProject.name}" under ${newProject.categoryName || 'General Projects'}. Ready for task breakdown.`,
+      },
+    ]);
+  };
+
+  const handleToggleStarProject = (projectId: string) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, starred: !p.starred } : p))
+    );
+  };
+
+  const handleUpdateProject = (updated: Project) => {
+    setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+  };
+
+  const handleCreateCategory = (newCatData: Omit<ProjectCategory, 'id'>) => {
+    const newCategory: ProjectCategory = {
+      ...newCatData,
+      id: `cat-${Date.now()}`,
+    };
+    setCategories((prev) => [...prev, newCategory]);
+
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: `msg-cat-created-${Date.now()}`,
+        sender: 'assistant',
+        timestamp: timeStr,
+        text: `Created new workspace "${newCategory.name}". You can now add boards and group live initiatives here.`,
+      },
+    ]);
+  };
+
   // Proposal: Apply Shifts to Calendar
   const handleApplyShifts = (proposalId: string, shifts: ExtractedShiftRow[]) => {
     // Snapshot for persistent undo
@@ -492,7 +557,7 @@ export default function App() {
 
   return (
     <div 
-      className={`h-full w-full max-h-full max-w-full bg-[#F7F7F8] font-sans antialiased text-slate-900 overflow-hidden select-none grid ${
+      className={`min-h-[100dvh] w-full bg-[#F7F7F8] font-sans antialiased text-slate-900 select-none grid ${
         chatCollapsed
           ? 'grid-cols-1 md:grid-cols-[88px_1fr]'
           : 'grid-cols-1 md:grid-cols-[88px_1fr] xl:grid-cols-[88px_1fr_380px]'
@@ -508,10 +573,10 @@ export default function App() {
         onOpenFiles={() => setIsProjectFilesOpen(true)}
       />
 
-      {/* 2. Central App Canvas (Fills 1fr in the grid) */}
+      {/* 2. Central App Canvas (owns vertical scrolling) */}
       <main 
         id="main-content-layout"
-        className="h-full overflow-hidden flex flex-col bg-[#F7F7F8] min-w-0"
+        className="w-full min-w-0 flex-1 min-h-[100dvh] overflow-y-auto bg-[#F7F7F8]"
       >
         {currentView === 'calendar' && (
           <CalendarView
@@ -529,6 +594,7 @@ export default function App() {
             primaryTask={primaryTodayTask}
             secondaryTasks={secondaryTodayTasks}
             atRiskItems={atRiskItems}
+            projects={projects}
             onSelectTask={setSelectedTask}
             onRescheduleAtRisk={handleRescheduleAtRisk}
             onShortenAtRisk={handleShortenAtRisk}
@@ -539,10 +605,54 @@ export default function App() {
               setCurrentView('calendar');
             }}
             onNavigateToTimeline={() => setCurrentView('timeline')}
+            onOpenBoardForProject={handleOpenBoardForProject}
+            onNavigateToBoard={() => setCurrentView('board')}
+            onStartTask={(task) => {
+              setTasks((prev) =>
+                prev.map((t) =>
+                  t.id === task.id ? { ...t, column: 'in_progress', status: 'queued' } : t
+                )
+              );
+            }}
             onOpenCreate={() => setIsCaptureOpen(true)}
             overageMinutes={overageMinutes}
             commitments={commitments}
             tasks={tasks}
+            onUpdateProject={(updated) => {
+              setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+            }}
+            onAddTask={(newTask) => {
+              const created: Task = {
+                ...newTask,
+                id: `task-${Date.now()}`,
+              } as Task;
+              setTasks((prev) => [created, ...prev]);
+            }}
+            onUpdateTask={(updated) => {
+              setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+            }}
+            onDeleteTask={(taskId) => {
+              setTasks((prev) => prev.filter((t) => t.id !== taskId));
+            }}
+          />
+        )}
+
+        {currentView === 'projects' && (
+          <ProjectsView
+            projects={projects}
+            tasks={tasks}
+            onSelectProject={setSelectedProjectId}
+            onOpenBoardForProject={handleOpenBoardForProject}
+            onCreateProject={handleCreateProject}
+            onToggleStarProject={handleToggleStarProject}
+            onDeleteProject={handleDeleteProject}
+            onUpdateProject={handleUpdateProject}
+            onAddTask={handleCreateTask}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={(taskId) => {
+              setTasks((prev) => prev.filter((t) => t.id !== taskId));
+            }}
+            onOpenCreateTask={() => setIsCaptureOpen(true)}
           />
         )}
 
