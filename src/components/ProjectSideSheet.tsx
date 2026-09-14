@@ -77,7 +77,7 @@ export const ProjectSideSheet: React.FC<ProjectSideSheetProps> = ({
     onTriggerToast(`Task added to ${project.name}`);
   };
 
-  const areas: CanonicalArea[] = ['Career', 'Magneto', 'Shamanicca', 'Finances', 'Health & Soul', 'Reference', 'Personal'];
+  const areas: CanonicalArea[] = ['Career', 'Magneto', 'Shamanicca', 'Finances', 'Health & Soul', 'Learning', 'Personal'];
 
   return (
     <div
@@ -326,9 +326,9 @@ export const ProjectSideSheet: React.FC<ProjectSideSheetProps> = ({
           </div>
         </div>
 
-        {/* Footer info (No Save button, optimistic persistence) */}
+        {/* Footer info (No Save button, mock-only state — lost on refresh) */}
         <div className="px-5 py-3 border-t border-black/[0.06] bg-slate-50 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
-          <span>Changes save automatically</span>
+          <span>Draft — not saved yet</span>
           <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-400">
             Esc to close
           </kbd>

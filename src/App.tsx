@@ -556,8 +556,8 @@ export default function App() {
   );
 
   return (
-    <div 
-      className={`min-h-[100dvh] w-full bg-[#F7F7F8] font-sans antialiased text-slate-900 select-none grid ${
+    <div
+      className={`h-dvh w-full bg-[#F7F7F8] font-sans antialiased text-slate-900 select-none grid ${
         chatCollapsed
           ? 'grid-cols-1 md:grid-cols-[88px_1fr]'
           : 'grid-cols-1 md:grid-cols-[88px_1fr] xl:grid-cols-[88px_1fr_380px]'
@@ -576,7 +576,7 @@ export default function App() {
       {/* 2. Central App Canvas (owns vertical scrolling) */}
       <main 
         id="main-content-layout"
-        className="w-full min-w-0 flex-1 min-h-[100dvh] overflow-y-auto bg-[#F7F7F8]"
+        className="w-full min-w-0 flex-1 h-full min-h-0 overflow-y-auto bg-[#F7F7F8]"
       >
         {currentView === 'calendar' && (
           <CalendarView
@@ -641,6 +641,7 @@ export default function App() {
           <ProjectsView
             projects={projects}
             tasks={tasks}
+            atRiskItems={atRiskItems}
             onSelectProject={setSelectedProjectId}
             onOpenBoardForProject={handleOpenBoardForProject}
             onCreateProject={handleCreateProject}

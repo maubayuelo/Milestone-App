@@ -23,7 +23,7 @@ export interface ProjectCategory {
   isTemplateCategory?: boolean;
 }
 
-export type CanonicalArea = 'Career' | 'Magneto' | 'Shamanicca' | 'Finances' | 'Health & Soul' | 'Reference' | 'Personal';
+export type CanonicalArea = 'Career' | 'Magneto' | 'Shamanicca' | 'Finances' | 'Health & Soul' | 'Learning' | 'Personal';
 
 export interface Project {
   id: string;

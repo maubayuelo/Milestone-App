@@ -1,30 +1,34 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Project, 
-  Task, 
-  CanonicalArea 
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Project,
+  Task,
+  CanonicalArea,
+  AtRiskItem,
+  ProjectStanding
 } from '../types';
-import { 
-  Star, 
-  Plus, 
-  Search, 
-  Layers, 
-  FolderPlus, 
-  X, 
-  MoreHorizontal, 
-  Check, 
-  Trash2, 
-  Archive, 
-  Pin, 
+import {
+  Star,
+  Plus,
+  Search,
+  Layers,
+  FolderPlus,
+  X,
+  MoreHorizontal,
+  Trash2,
+  Archive,
+  Pin,
   Edit3,
   BookOpen
 } from 'lucide-react';
 import { ProjectSideSheet } from '../components/ProjectSideSheet';
-import { getCanonicalArea } from '../utils/areaColor';
+import { getCanonicalArea, getAreaStyleByCanonicalArea } from '../utils/areaColor';
+import { computeProjectStandings } from '../utils/projectStanding';
 
 interface ProjectsViewProps {
   projects: Project[];
   tasks: Task[];
+  atRiskItems?: AtRiskItem[];
   onSelectProject: (projectId: string) => void;
   onOpenBoardForProject?: (projectId: string) => void;
   onCreateProject: (newProject: Omit<Project, 'id'>) => void;
@@ -37,89 +41,62 @@ interface ProjectsViewProps {
   onOpenCreateTask?: (projectId?: string) => void;
 }
 
-const COVER_COLOR_PRESETS = [
-  { name: 'Royal Blue', value: '#1D4ED8', type: 'color' },
-  { name: 'Deep Navy', value: '#1E293B', type: 'color' },
-  { name: 'Cool Slate', value: '#475569', type: 'color' },
-  { name: 'Cyan Sea', value: '#0284C7', type: 'color' },
-  { name: 'Teal Forest', value: '#0D9488', type: 'color' },
-  { name: 'Emerald', value: '#059669', type: 'color' },
-  { name: 'Indigo', value: '#4338CA', type: 'color' },
-  { name: 'Sunset Amber', value: '#EA580C', type: 'color' },
-  { 
-    name: 'Erotic Magenta Gradient', 
-    value: 'linear-gradient(135deg, #3730A3 0%, #86198F 50%, #BE185D 100%)', 
-    type: 'gradient' 
-  },
-  { 
-    name: 'Ocean Cyan Gradient', 
-    value: 'linear-gradient(135deg, #0284C7 0%, #0D9488 100%)', 
-    type: 'gradient' 
-  },
-];
-
 // Fix 3: Six canonical areas in exact specified order, plus Personal as seventh
+// Color is derived from utils/areaColor.ts — the single source of truth for area color.
 export const CANONICAL_AREAS: {
   id: CanonicalArea;
   name: string;
-  emoji: string;
   color: string;
   description: string;
 }[] = [
-  { 
-    id: 'Career', 
-    name: 'Career', 
-    emoji: '💼', 
-    color: '#2563EB', 
-    description: 'Professional positions, employment and institutional commitments' 
+  {
+    id: 'Career',
+    name: 'Career',
+    color: getAreaStyleByCanonicalArea('Career').hexColor,
+    description: 'Professional positions, employment and institutional commitments'
   },
-  { 
-    id: 'Magneto', 
-    name: 'Magneto', 
-    emoji: '🧲', 
-    color: '#059669', 
-    description: 'Client design initiatives, brand systems, and agency deliverables' 
+  {
+    id: 'Magneto',
+    name: 'Magneto',
+    color: getAreaStyleByCanonicalArea('Magneto').hexColor,
+    description: 'Client design initiatives, brand systems, and agency deliverables'
   },
-  { 
-    id: 'Shamanicca', 
-    name: 'Shamanicca', 
-    emoji: '🌿', 
-    color: '#7C3AED', 
-    description: 'Mindfulness audio, ambient synthesis, and experimental ventures' 
+  {
+    id: 'Shamanicca',
+    name: 'Shamanicca',
+    color: getAreaStyleByCanonicalArea('Shamanicca').hexColor,
+    description: 'Mindfulness audio, ambient synthesis, and experimental ventures'
   },
-  { 
-    id: 'Finances', 
-    name: 'Finances', 
-    emoji: '💰', 
-    color: '#D97706', 
-    description: 'Tax preparation, freelance accounting, invoices, and budgets' 
+  {
+    id: 'Finances',
+    name: 'Finances',
+    color: getAreaStyleByCanonicalArea('Finances').hexColor,
+    description: 'Tax preparation, freelance accounting, invoices, and budgets'
   },
-  { 
-    id: 'Health & Soul', 
-    name: 'Health & Soul', 
-    emoji: '🌱', 
-    color: '#0D9488', 
-    description: 'Rest cycles, sleep consistency, mindfulness, and personal recovery' 
+  {
+    id: 'Health & Soul',
+    name: 'Health & Soul',
+    color: getAreaStyleByCanonicalArea('Health & Soul').hexColor,
+    description: 'Rest cycles, sleep consistency, mindfulness, and personal recovery'
   },
-  { 
-    id: 'Reference', 
-    name: 'Reference', 
-    emoji: '📚', 
-    color: '#64748B', 
-    description: 'Documentation, SOPs, archives, and evergreen reference notes' 
+  {
+    id: 'Learning',
+    name: 'Learning',
+    color: getAreaStyleByCanonicalArea('Learning').hexColor,
+    description: 'Documentation, SOPs, archives, and evergreen reference notes'
   },
-  { 
-    id: 'Personal', 
-    name: 'Personal', 
-    emoji: '🏠', 
-    color: '#E11D48', 
-    description: 'Montreal housing project, Anormal, and personal lifestyle' 
+  {
+    id: 'Personal',
+    name: 'Personal',
+    color: getAreaStyleByCanonicalArea('Personal').hexColor,
+    description: 'Montreal housing project, Anormal, and personal lifestyle'
   },
 ];
 
 export const ProjectsView: React.FC<ProjectsViewProps> = ({
   projects,
   tasks,
+  atRiskItems = [],
   onSelectProject,
   onCreateProject,
   onToggleStarProject,
@@ -140,7 +117,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [newProjectArea, setNewProjectArea] = useState<CanonicalArea>('Career');
   const [newProjectClient, setNewProjectClient] = useState('');
   const [newProjectScope, setNewProjectScope] = useState('');
-  const [newProjectCover, setNewProjectCover] = useState(COVER_COLOR_PRESETS[0].value);
   const [newProjectStarred, setNewProjectStarred] = useState(false);
 
   // Compute live task counts and completion percentage per project (Fix 1: Never a repeated constant)
@@ -159,6 +135,17 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     }
     return metrics;
   }, [projects, tasks]);
+
+  // Risk + pace per project (A2) — same algorithm/util as the Standing view (TodayView),
+  // not recomputed, just surfaced here keyed by project id.
+  const standingsById = useMemo(() => {
+    const standings = computeProjectStandings(projects, tasks, atRiskItems);
+    const map: Record<string, ProjectStanding> = {};
+    for (const s of standings) {
+      map[s.project.id] = s;
+    }
+    return map;
+  }, [projects, tasks, atRiskItems]);
 
   // Active project counts per area (Fix 3: The count beside each area is ACTIVE projects, not total)
   const activeAreaCounts = useMemo(() => {
@@ -229,7 +216,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setNewProjectTitle('');
     setNewProjectClient('');
     setNewProjectScope('');
-    setNewProjectCover(COVER_COLOR_PRESETS[0].value);
     setNewProjectStarred(false);
     setIsCreateProjectOpen(true);
   };
@@ -238,15 +224,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     e.preventDefault();
     if (!newProjectTitle.trim()) return;
 
-    const isGradient = newProjectCover.startsWith('linear-gradient');
-
     onCreateProject({
       name: newProjectTitle.trim(),
       client: newProjectClient.trim() || 'Internal Work',
       scope: newProjectScope.trim() || 'Project roadmap and deliverables',
       area: newProjectArea,
-      color: isGradient ? undefined : newProjectCover,
-      gradient: isGradient ? newProjectCover : undefined,
       starred: newProjectStarred,
       lastViewedAt: new Date().toISOString(),
       createdAt: new Date().toISOString().split('T')[0],
@@ -347,7 +329,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-sm shrink-0">{area.emoji}</span>
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: area.color }}
+                  />
                   <span className="truncate">{area.name}</span>
                 </div>
 
@@ -359,7 +344,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   >
                     {activeCount}
                   </span>
-                  {area.id !== 'Reference' && (
+                  {area.id !== 'Learning' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -429,13 +414,55 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           </div>
         </header>
 
-        {/* Canvas Body */}
+        {/* Canvas Body — every path below renders from `filteredProjects`, the
+            same source the header count (line ~381) reads from, so the grid and
+            the count can never diverge again (that divergence was the root cause
+            of the "Starred Projects: 5 in the count, 0 cards" bug). */}
         <div className="p-6 md:p-8 space-y-10 max-w-7xl w-full mx-auto">
           {/* -------------------------------------------------------------
-              SECTION A: ⭐ STARRED PROJECTS
+              SECTION A: ⭐ STARRED PROJECTS — embedded highlight row.
+              Only in the 'all' tab (its own dedicated 'starred' tab view is
+              Section A2 below); suppressed while searching, same as before.
               ------------------------------------------------------------- */}
-          {activeAreaTab === 'all' && starredProjects.length > 0 && !searchQuery && (
-            <section id="starred-projects-section" className="space-y-4">
+          {activeAreaTab === 'all' && !searchQuery && (() => {
+            const starredInView = filteredProjects.filter((p) => p.starred);
+            if (starredInView.length === 0) return null;
+            return (
+              <section id="starred-projects-section" className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
+                  <h2 className="text-sm font-bold text-[#1A1D23] uppercase tracking-[0.04em]">
+                    Starred Projects
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {starredInView.map((p) => (
+                    <ProjectCard
+                      key={`starred-${p.id}`}
+                      project={p}
+                      metrics={projectMetrics[p.id]}
+                      standing={standingsById[p.id]}
+                      onEditProject={() => setEditingProject(p)}
+                      onToggleStar={() => onToggleStarProject(p.id)}
+                      onArchive={() => handleArchiveProject(p)}
+                      onDelete={onDeleteProject ? () => onDeleteProject(p.id) : undefined}
+                      onSelectProject={() => onSelectProject(p.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
+
+          {/* -------------------------------------------------------------
+              SECTION A2: 'starred' TAB — flat grid, no area sub-grouping.
+              Starred already reads as a single flat row (not grouped by area)
+              in the 'all' tab above, so this dedicated view keeps that same
+              visual language instead of introducing area headers for it.
+              ------------------------------------------------------------- */}
+          {activeAreaTab === 'starred' && (
+            <section id="starred-only-section" className="space-y-4">
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
                 <h2 className="text-sm font-bold text-[#1A1D23] uppercase tracking-[0.04em]">
@@ -443,38 +470,47 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {starredProjects.map((p) => (
-                  <ProjectCard 
-                    key={`starred-${p.id}`}
-                    project={p}
-                    metrics={projectMetrics[p.id]}
-                    onEditProject={() => setEditingProject(p)}
-                    onToggleStar={() => onToggleStarProject(p.id)}
-                    onArchive={() => handleArchiveProject(p)}
-                    onDelete={onDeleteProject ? () => onDeleteProject(p.id) : undefined}
-                    onSelectProject={() => onSelectProject(p.id)}
-                  />
-                ))}
-              </div>
+              {filteredProjects.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-dashed border-black/[0.08] p-6 text-center">
+                  <p className="text-xs text-[#6B7280]">
+                    {searchQuery ? 'No starred projects match your search.' : 'No starred projects yet.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {filteredProjects.map((p) => (
+                    <ProjectCard
+                      key={p.id}
+                      project={p}
+                      metrics={projectMetrics[p.id]}
+                      standing={standingsById[p.id]}
+                      onEditProject={() => setEditingProject(p)}
+                      onToggleStar={() => onToggleStarProject(p.id)}
+                      onArchive={() => handleArchiveProject(p)}
+                      onDelete={onDeleteProject ? () => onDeleteProject(p.id) : undefined}
+                      onSelectProject={() => onSelectProject(p.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
           {/* -------------------------------------------------------------
-              SECTION B: CANONICAL AREAS WITH PROJECTS
+              SECTION B: CANONICAL AREAS WITH PROJECTS — 'all' tab and any
+              single-area tab. Not rendered for 'starred' (Section A2 owns that).
               ------------------------------------------------------------- */}
+          {activeAreaTab !== 'starred' && (
           <section id="areas-grouped-section" className="space-y-10">
             {projectsByArea.map(({ area, projects: areaProjects }) => (
               <div key={area.id} className="space-y-4">
                 {/* Area Header Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-black/[0.04] shadow-xs">
                   <div className="flex items-center gap-3">
-                    <div 
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: area.color }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-base shadow-xs shrink-0"
-                    >
-                      {area.emoji}
-                    </div>
+                    />
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-base font-bold text-[#1A1D23] tracking-tight leading-snug">
@@ -488,7 +524,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     </div>
                   </div>
 
-                  {area.id !== 'Reference' && (
+                  {area.id !== 'Learning' && (
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleOpenCreateProjectModal(area.id)}
@@ -501,17 +537,20 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   )}
                 </div>
 
-                {/* Fix 3: Reference holds zero projects -> Render real empty state */}
-                {area.id === 'Reference' ? (
+                {/* Fix 3: Learning holds zero projects -> Render real empty state */}
+                {area.id === 'Learning' ? (
                   <div className="bg-white rounded-2xl border border-dashed border-black/[0.08] p-8 flex flex-col items-center justify-center text-center max-w-lg mx-auto">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 mb-2.5 text-2xl shadow-2xs">
-                      📚
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-2.5 shadow-2xs">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: area.color }}
+                      />
                     </div>
                     <h4 className="text-sm font-bold text-[#1A1D23] mb-1">
-                      No Active Projects in Reference
+                      No Active Projects in Learning
                     </h4>
                     <p className="text-xs text-[#6B7280] leading-relaxed max-w-md">
-                      Reference holds static documentation, SOPs, archives, contracts, and evergreen notes. Active deliverables are managed within functional areas.
+                      Learning holds static documentation, SOPs, archives, contracts, and evergreen notes. Active deliverables are managed within functional areas.
                     </p>
                   </div>
                 ) : areaProjects.length === 0 ? (
@@ -529,10 +568,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   /* Project Cards Grid */
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {areaProjects.map((p) => (
-                      <ProjectCard 
+                      <ProjectCard
                         key={p.id}
                         project={p}
                         metrics={projectMetrics[p.id]}
+                        standing={standingsById[p.id]}
                         onEditProject={() => setEditingProject(p)}
                         onToggleStar={() => onToggleStarProject(p.id)}
                         onArchive={() => handleArchiveProject(p)}
@@ -561,6 +601,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               </div>
             ))}
           </section>
+          )}
         </div>
       </div>
 
@@ -615,9 +656,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   onChange={(e) => setNewProjectArea(e.target.value as CanonicalArea)}
                   className="w-full px-3.5 py-2.5 text-sm bg-white border border-black/[0.1] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all font-medium cursor-pointer"
                 >
-                  {CANONICAL_AREAS.filter(a => a.id !== 'Reference').map((a) => (
+                  {CANONICAL_AREAS.filter(a => a.id !== 'Learning').map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.emoji} {a.name}
+                      {a.name}
                     </option>
                   ))}
                 </select>
@@ -649,32 +690,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   onChange={(e) => setNewProjectScope(e.target.value)}
                   className="w-full px-3.5 py-2 text-sm bg-white border border-black/[0.1] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all font-medium resize-none"
                 />
-              </div>
-
-              {/* Cover Color & Gradient Presets */}
-              <div>
-                <label className="block text-xs font-bold text-[#1A1D23] mb-2 uppercase tracking-[0.03em]">
-                  Cover Theme
-                </label>
-                <div className="grid grid-cols-5 gap-2">
-                  {COVER_COLOR_PRESETS.map((preset, idx) => {
-                    const isSelected = newProjectCover === preset.value;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setNewProjectCover(preset.value)}
-                        style={{ background: preset.value }}
-                        className={`h-10 rounded-xl relative flex items-center justify-center transition-all cursor-pointer shadow-xs ${
-                          isSelected ? 'ring-2 ring-offset-2 ring-blue-600 scale-105' : 'hover:opacity-90'
-                        }`}
-                        title={preset.name}
-                      >
-                        {isSelected && <Check className="w-4 h-4 text-white drop-shadow-md" />}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
               {/* Starred checkbox */}
@@ -740,6 +755,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 interface ProjectCardProps {
   project: Project;
   metrics?: { total: number; done: number; percentage: number; hours: number };
+  standing?: ProjectStanding;
   onEditProject: () => void;
   onToggleStar: () => void;
   onArchive: () => void;
@@ -747,35 +763,99 @@ interface ProjectCardProps {
   onSelectProject: () => void;
 }
 
+// Risk badge label/style — status is communicated ONLY here, never by card fill (A1).
+const RISK_BADGE: Record<ProjectStanding['risk'], { label: string; className: string }> = {
+  onTrack: { label: 'On track', className: 'bg-white/90 text-emerald-700' },
+  atRisk: { label: 'At risk', className: 'bg-white/90 text-amber-700' },
+  blocked: { label: 'Blocked', className: 'bg-white/90 text-slate-700' },
+  noTasksLinked: { label: 'No tasks', className: 'bg-white/70 text-slate-500' },
+};
+
 const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
   metrics = { total: 0, done: 0, percentage: 0, hours: 0 },
+  standing,
   onEditProject,
   onToggleStar,
   onArchive,
   onDelete,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [confirmAction, setConfirmAction] = useState<'archive' | 'delete' | null>(null);
 
-  const coverStyle = project.gradient
-    ? { background: project.gradient }
-    : { backgroundColor: project.color || '#1D4ED8' };
+  const handleToggleMenu = () => {
+    if (!menuOpen && menuButtonRef.current) {
+      const rect = menuButtonRef.current.getBoundingClientRect();
+      // Position relative to viewport (portal renders to document.body, escaping
+      // the card's overflow-hidden — see FIX-2 diagnosis).
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setMenuOpen((prev) => !prev);
+  };
+
+  // FIX-3: the portaled menu is `position: fixed` at coordinates captured once on
+  // open — it doesn't track the button on resize or on scroll of any ancestor
+  // (including <main>, scrollable since FIX-1). Rather than re-measure/reposition
+  // (Floating UI territory), just close it so it never floats away from the button.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeMenu = () => setMenuOpen(false);
+    window.addEventListener('resize', closeMenu);
+    // capture: true catches scroll on any scrollable ancestor (e.g. <main>), not just window
+    window.addEventListener('scroll', closeMenu, true);
+    return () => {
+      window.removeEventListener('resize', closeMenu);
+      window.removeEventListener('scroll', closeMenu, true);
+    };
+  }, [menuOpen]);
+
+  // Card fill is always the project's canonical area color — never a free
+  // per-project color/gradient. Area = color, status = badge (see A1).
+  const areaStyle = getAreaStyleByCanonicalArea(getCanonicalArea(project.area, project.name));
+  const coverStyle = { backgroundColor: areaStyle.hexColor };
+
+  // Pace label in hours, same thresholds/wording as the Standing view (A2 — surfaced, not recomputed).
+  let paceLabel: string | null = null;
+  let paceClass = 'text-white/85';
+  if (standing && !standing.hasNoLinkedTasks) {
+    if (standing.paceDeltaMinutes < -30) {
+      const hoursBehind = Math.max(1, Math.round(Math.abs(standing.paceDeltaMinutes) / 60));
+      paceLabel = `${hoursBehind}h behind`;
+      paceClass = 'text-amber-200';
+    } else if (standing.paceDeltaMinutes > 30) {
+      const hoursSlack = Math.max(1, Math.round(standing.paceDeltaMinutes / 60));
+      paceLabel = `${hoursSlack}h of slack`;
+      paceClass = 'text-emerald-200';
+    } else {
+      paceLabel = 'on pace';
+      paceClass = 'text-white/85';
+    }
+  }
 
   return (
     <div
       onClick={onEditProject}
-      className={`group relative flex flex-col h-[150px] rounded-2xl overflow-hidden cursor-pointer shadow-[0_2px_8px_rgba(30,35,50,0.06),0_1px_2px_rgba(30,35,50,0.04)] hover:shadow-[0_8px_20px_rgba(30,35,50,0.12)] hover:-translate-y-0.5 transition-all duration-200 select-none ${
+      className={`group relative flex flex-col min-h-[150px] rounded-2xl overflow-hidden cursor-pointer shadow-[0_2px_8px_rgba(30,35,50,0.06),0_1px_2px_rgba(30,35,50,0.04)] hover:shadow-[0_8px_20px_rgba(30,35,50,0.12)] hover:-translate-y-0.5 transition-all duration-200 select-none ${
         project.isClosed ? 'opacity-60 grayscale-[40%]' : ''
       }`}
       style={coverStyle}
     >
-      {/* Top Header inside card: Title + Star button + "⋯" Menu */}
-      <div className="p-4 flex items-start justify-between gap-2 z-10">
-        <h4 className="text-sm font-bold text-white tracking-tight leading-snug drop-shadow-xs line-clamp-2 flex-1">
-          {project.name}
-        </h4>
+      {/* Top Header inside card: badge/Star/Menu row, then Title on its own full-width row
+          so the title never competes with the icon cluster for space (fixes truncation
+          regression when the badge was sharing a row with a flex-1 title). */}
+      <div className="p-4 flex flex-col gap-1.5 z-10">
+        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {/* Risk status badge — position consistent, color never used for status (A1/A2) */}
+          {standing && (
+            <span
+              className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full shrink-0 ${RISK_BADGE[standing.risk].className}`}
+            >
+              {RISK_BADGE[standing.risk].label}
+            </span>
+          )}
 
-        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
           {/* Star toggle */}
           <button
             onClick={onToggleStar}
@@ -794,21 +874,27 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           {/* Fix 1: "⋯" Menu button */}
           <div className="relative">
             <button
-              onClick={() => setMenuOpen(!menuOpen)}
+              ref={menuButtonRef}
+              onClick={handleToggleMenu}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
               title="Project actions"
             >
               <MoreHorizontal className="w-4 h-4" />
             </button>
 
-            {/* Menu Dropdown */}
-            {menuOpen && (
+            {/* Menu Dropdown — rendered via portal to document.body so it escapes
+                the card's overflow-hidden (needed for the rounded-2xl area-color
+                fill) instead of being clipped by it. See FIX-2. */}
+            {menuOpen && menuPos && createPortal(
               <>
-                <div 
-                  className="fixed inset-0 z-30" 
-                  onClick={() => setMenuOpen(false)} 
+                <div
+                  className="fixed inset-0 z-100"
+                  onClick={() => setMenuOpen(false)}
                 />
-                <div className="absolute right-0 top-8 z-40 w-36 bg-white rounded-xl shadow-xl border border-black/[0.08] py-1 text-xs text-[#1A1D23] animate-in fade-in zoom-in-95 duration-100">
+                <div
+                  style={{ top: menuPos.top, right: menuPos.right }}
+                  className="fixed z-101 w-36 bg-white rounded-xl shadow-xl border border-black/[0.08] py-1 text-xs text-[#1A1D23] animate-in fade-in zoom-in-95 duration-100"
+                >
                   <button
                     onClick={() => {
                       setMenuOpen(false);
@@ -834,7 +920,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                   <button
                     onClick={() => {
                       setMenuOpen(false);
-                      onArchive();
+                      setConfirmAction('archive');
                     }}
                     className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-slate-100 cursor-pointer font-medium text-slate-700"
                   >
@@ -846,7 +932,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                     <button
                       onClick={() => {
                         setMenuOpen(false);
-                        onDelete();
+                        setConfirmAction('delete');
                       }}
                       className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-red-50 text-red-600 cursor-pointer font-medium border-t border-black/[0.04]"
                     >
@@ -855,30 +941,116 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                     </button>
                   )}
                 </div>
-              </>
+              </>,
+              document.body
+            )}
+
+            {/* Archive/Delete confirmation — destructive-ish actions get a confirm step.
+                Portaled to document.body for the same overflow-hidden reason as the menu. */}
+            {confirmAction && createPortal(
+              <div
+                className="fixed inset-0 z-110 flex items-center justify-center bg-black/40 p-4"
+                onClick={() => setConfirmAction(null)}
+              >
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-xs bg-white rounded-2xl shadow-2xl border border-black/[0.08] p-5 animate-in fade-in zoom-in-95 duration-150"
+                >
+                  <h5 className="text-sm font-bold text-[#1A1D23] mb-1.5">
+                    {confirmAction === 'delete'
+                      ? 'Delete this project?'
+                      : project.isClosed
+                      ? 'Unarchive this project?'
+                      : 'Archive this project?'}
+                  </h5>
+                  <p className="text-xs text-[#6B7280] leading-relaxed mb-4">
+                    {confirmAction === 'delete' ? (
+                      <>
+                        <strong className="text-[#1A1D23]">{project.name}</strong> will be removed. This can't be undone (mock data — lost on refresh either way).
+                      </>
+                    ) : project.isClosed ? (
+                      <>
+                        <strong className="text-[#1A1D23]">{project.name}</strong> will move back to active projects.
+                      </>
+                    ) : (
+                      <>
+                        <strong className="text-[#1A1D23]">{project.name}</strong> will be archived and hidden from active views. You can unarchive it later.
+                      </>
+                    )}
+                  </p>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmAction(null)}
+                      className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#6B7280] hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirmAction === 'delete') {
+                          onDelete?.();
+                        } else {
+                          onArchive();
+                        }
+                        setConfirmAction(null);
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-semibold text-white transition-colors cursor-pointer ${
+                        confirmAction === 'delete'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    >
+                      {confirmAction === 'delete' ? 'Delete' : project.isClosed ? 'Unarchive' : 'Archive'}
+                    </button>
+                  </div>
+                </div>
+              </div>,
+              document.body
             )}
           </div>
         </div>
+
+        <h4 className="text-sm font-bold text-white tracking-tight leading-snug drop-shadow-xs line-clamp-2">
+          {project.name}
+        </h4>
       </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Bottom Footer inside card: Subline, Live task badge & progress (computed per project) */}
-      <div className="p-3 bg-black/20 backdrop-blur-xs flex items-center justify-between gap-2 z-10">
-        <span className="text-[11px] font-medium text-white/90 truncate max-w-[140px]">
-          {project.client || project.area || 'Active'}
-        </span>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white backdrop-blur-xs">
-            {metrics.total} {metrics.total === 1 ? 'task' : 'tasks'}
+      {/* Bottom Footer inside card: pace subline, client, Live task badge & progress */}
+      <div className="p-3 bg-black/20 backdrop-blur-xs flex flex-col gap-1 z-10">
+        {paceLabel && (
+          <span className={`text-[10px] font-semibold ${paceClass}`}>{paceLabel}</span>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-medium text-white/90 truncate max-w-[140px]">
+            {project.client || project.area || 'Active'}
           </span>
-          {metrics.total > 0 && (
-            <span className="text-[10px] font-mono font-medium text-white/85">
-              {metrics.percentage}%
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white backdrop-blur-xs">
+              {metrics.total} {metrics.total === 1 ? 'task' : 'tasks'}
             </span>
-          )}
+            {metrics.total > 0 && (
+              <div className="flex items-center gap-1.5">
+                {/* Thin inline progress bar — same track/fill shape as the Standing view's bar */}
+                <div className="w-10 h-1.5 rounded-full bg-white/25 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-white transition-all duration-300"
+                    style={{ width: `${metrics.percentage}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-mono font-medium text-white/85">
+                  {metrics.percentage}%
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

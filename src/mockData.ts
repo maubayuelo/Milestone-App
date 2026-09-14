@@ -42,11 +42,11 @@ export const INITIAL_CATEGORIES: ProjectCategory[] = [
     description: 'Mindfulness, habit tracking, physical recovery, and personal routines',
   },
   {
-    id: 'area-reference',
-    name: 'Reference',
+    id: 'area-learning',
+    name: 'Learning',
     icon: '📚',
-    color: '#64748B',
-    badgeLetter: 'R',
+    color: '#758195',
+    badgeLetter: 'L',
     description: 'Standard operating procedures, documentation, and archival notes',
   },
   {

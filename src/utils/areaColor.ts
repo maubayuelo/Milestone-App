@@ -1,4 +1,4 @@
-export type CanonicalArea = 'Career' | 'Magneto' | 'Shamanicca' | 'Finances' | 'Health & Soul' | 'Reference' | 'Personal' | 'Wellness';
+export type CanonicalArea = 'Career' | 'Magneto' | 'Shamanicca' | 'Finances' | 'Health & Soul' | 'Learning' | 'Personal' | 'Wellness';
 
 export interface AreaStyleConfig {
   area: CanonicalArea;
@@ -72,134 +72,141 @@ export function getCanonicalArea(rawArea?: string, rawProjectName?: string): Can
     combined.includes('docs') ||
     combined.includes('sop')
   ) {
-    return 'Reference';
+    return 'Learning';
   }
   return 'Career';
 }
 
 export function getAreaStyle(rawArea?: string, rawProjectName?: string): AreaStyleConfig {
   const area = getCanonicalArea(rawArea, rawProjectName);
+  return getAreaStyleByCanonicalArea(area);
+}
+
+// Direct lookup by canonical area — use this when the caller already has the
+// canonical area value (e.g. iterating CANONICAL_AREAS) rather than raw text
+// that needs keyword classification via getCanonicalArea().
+export function getAreaStyleByCanonicalArea(area: CanonicalArea): AreaStyleConfig {
   switch (area) {
     case 'Magneto':
       return {
         area: 'Magneto',
         letter: 'M',
-        leftBorderClass: 'border-l-[3px] border-l-[#059669]',
-        tagClass: 'bg-[#059669]/[0.12] text-[#047857] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
-        labelClass: 'text-[#059669]',
-        outlineChipClass: 'bg-[#059669]/[0.12] text-[#047857] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-        hexColor: '#059669',
-        rgbValues: '5, 150, 105',
-        tintBg8: 'bg-[#059669]/[0.08]',
-        tintBg10: 'bg-[#059669]/[0.10]',
-        tintBg20: 'bg-[#059669]/[0.20]',
-        tintHover10: 'hover:bg-[#059669]/[0.10]',
-        badgeBg15: 'bg-[#059669]/[0.15]',
-        badgeText: 'text-[#059669]',
+        leftBorderClass: 'border-l-[3px] border-l-[#93B84B]',
+        tagClass: 'bg-[#93B84B]/[0.12] text-[#6E8A38] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#93B84B]',
+        outlineChipClass: 'bg-[#93B84B]/[0.12] text-[#6E8A38] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#93B84B',
+        rgbValues: '147, 184, 75',
+        tintBg8: 'bg-[#93B84B]/[0.08]',
+        tintBg10: 'bg-[#93B84B]/[0.10]',
+        tintBg20: 'bg-[#93B84B]/[0.20]',
+        tintHover10: 'hover:bg-[#93B84B]/[0.10]',
+        badgeBg15: 'bg-[#93B84B]/[0.15]',
+        badgeText: 'text-[#93B84B]',
       };
     case 'Shamanicca':
       return {
         area: 'Shamanicca',
         letter: 'S',
-        leftBorderClass: 'border-l-[3px] border-l-[#7C3AED]',
-        tagClass: 'bg-[#7C3AED]/[0.12] text-[#6D28D9] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
-        labelClass: 'text-[#7C3AED]',
-        outlineChipClass: 'bg-[#7C3AED]/[0.12] text-[#6D28D9] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-        hexColor: '#7C3AED',
-        rgbValues: '124, 58, 237',
-        tintBg8: 'bg-[#7C3AED]/[0.08]',
-        tintBg10: 'bg-[#7C3AED]/[0.10]',
-        tintBg20: 'bg-[#7C3AED]/[0.20]',
-        tintHover10: 'hover:bg-[#7C3AED]/[0.10]',
-        badgeBg15: 'bg-[#7C3AED]/[0.15]',
-        badgeText: 'text-[#7C3AED]',
+        leftBorderClass: 'border-l-[3px] border-l-[#9561D8]',
+        tagClass: 'bg-[#9561D8]/[0.12] text-[#7049A2] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#9561D8]',
+        outlineChipClass: 'bg-[#9561D8]/[0.12] text-[#7049A2] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#9561D8',
+        rgbValues: '149, 97, 216',
+        tintBg8: 'bg-[#9561D8]/[0.08]',
+        tintBg10: 'bg-[#9561D8]/[0.10]',
+        tintBg20: 'bg-[#9561D8]/[0.20]',
+        tintHover10: 'hover:bg-[#9561D8]/[0.10]',
+        badgeBg15: 'bg-[#9561D8]/[0.15]',
+        badgeText: 'text-[#9561D8]',
       };
     case 'Finances':
       return {
         area: 'Finances',
         letter: 'F',
-        leftBorderClass: 'border-l-[3px] border-l-[#D97706]',
-        tagClass: 'bg-[#D97706]/[0.12] text-[#B45309] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
-        labelClass: 'text-[#D97706]',
-        outlineChipClass: 'bg-[#D97706]/[0.12] text-[#B45309] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-        hexColor: '#D97706',
-        rgbValues: '217, 119, 6',
-        tintBg8: 'bg-[#D97706]/[0.08]',
-        tintBg10: 'bg-[#D97706]/[0.10]',
-        tintBg20: 'bg-[#D97706]/[0.20]',
-        tintHover10: 'hover:bg-[#D97706]/[0.10]',
-        badgeBg15: 'bg-[#D97706]/[0.15]',
-        badgeText: 'text-[#D97706]',
+        leftBorderClass: 'border-l-[3px] border-l-[#E6A23C]',
+        tagClass: 'bg-[#E6A23C]/[0.12] text-[#AD7A2D] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#E6A23C]',
+        outlineChipClass: 'bg-[#E6A23C]/[0.12] text-[#AD7A2D] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#E6A23C',
+        rgbValues: '230, 162, 60',
+        tintBg8: 'bg-[#E6A23C]/[0.08]',
+        tintBg10: 'bg-[#E6A23C]/[0.10]',
+        tintBg20: 'bg-[#E6A23C]/[0.20]',
+        tintHover10: 'hover:bg-[#E6A23C]/[0.10]',
+        badgeBg15: 'bg-[#E6A23C]/[0.15]',
+        badgeText: 'text-[#E6A23C]',
       };
     case 'Health & Soul':
     case 'Wellness':
       return {
         area: 'Health & Soul',
         letter: 'H',
-        leftBorderClass: 'border-l-[3px] border-l-[#10B981]',
-        tagClass: 'bg-[#10B981]/[0.12] text-[#047857] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
-        labelClass: 'text-[#10B981]',
-        outlineChipClass: 'bg-[#10B981]/[0.12] text-[#047857] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-        hexColor: '#10B981',
-        rgbValues: '16, 185, 129',
-        tintBg8: 'bg-[#10B981]/[0.08]',
-        tintBg10: 'bg-[#10B981]/[0.10]',
-        tintBg20: 'bg-[#10B981]/[0.20]',
-        tintHover10: 'hover:bg-[#10B981]/[0.10]',
-        badgeBg15: 'bg-[#10B981]/[0.15]',
-        badgeText: 'text-[#10B981]',
+        leftBorderClass: 'border-l-[3px] border-l-[#F28C9A]',
+        tagClass: 'bg-[#F28C9A]/[0.12] text-[#B66974] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#F28C9A]',
+        outlineChipClass: 'bg-[#F28C9A]/[0.12] text-[#B66974] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#F28C9A',
+        rgbValues: '242, 140, 154',
+        tintBg8: 'bg-[#F28C9A]/[0.08]',
+        tintBg10: 'bg-[#F28C9A]/[0.10]',
+        tintBg20: 'bg-[#F28C9A]/[0.20]',
+        tintHover10: 'hover:bg-[#F28C9A]/[0.10]',
+        badgeBg15: 'bg-[#F28C9A]/[0.15]',
+        badgeText: 'text-[#F28C9A]',
       };
     case 'Personal':
       return {
         area: 'Personal',
         letter: 'P',
-        leftBorderClass: 'border-l-[3px] border-l-[#8B5CF6]',
-        tagClass: 'bg-[#8B5CF6]/[0.12] text-[#7C3AED] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
-        labelClass: 'text-[#8B5CF6]',
-        outlineChipClass: 'bg-[#8B5CF6]/[0.12] text-[#7C3AED] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-        hexColor: '#8B5CF6',
-        rgbValues: '139, 92, 246',
-        tintBg8: 'bg-[#8B5CF6]/[0.08]',
-        tintBg10: 'bg-[#8B5CF6]/[0.10]',
-        tintBg20: 'bg-[#8B5CF6]/[0.20]',
-        tintHover10: 'hover:bg-[#8B5CF6]/[0.10]',
-        badgeBg15: 'bg-[#8B5CF6]/[0.15]',
-        badgeText: 'text-[#8B5CF6]',
+        leftBorderClass: 'border-l-[3px] border-l-[#75BDE8]',
+        tagClass: 'bg-[#75BDE8]/[0.12] text-[#588EAE] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#75BDE8]',
+        outlineChipClass: 'bg-[#75BDE8]/[0.12] text-[#588EAE] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#75BDE8',
+        rgbValues: '117, 189, 232',
+        tintBg8: 'bg-[#75BDE8]/[0.08]',
+        tintBg10: 'bg-[#75BDE8]/[0.10]',
+        tintBg20: 'bg-[#75BDE8]/[0.20]',
+        tintHover10: 'hover:bg-[#75BDE8]/[0.10]',
+        badgeBg15: 'bg-[#75BDE8]/[0.15]',
+        badgeText: 'text-[#75BDE8]',
       };
-    case 'Reference':
+    case 'Learning':
       return {
-        area: 'Reference',
-        letter: 'R',
-        leftBorderClass: 'border-l-[3px] border-l-[#64748B]',
-        tagClass: 'bg-[#64748B]/[0.12] text-[#475569] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
-        labelClass: 'text-[#64748B]',
-        outlineChipClass: 'bg-[#64748B]/[0.12] text-[#475569] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-        hexColor: '#64748B',
-        rgbValues: '100, 116, 139',
-        tintBg8: 'bg-[#64748B]/[0.08]',
-        tintBg10: 'bg-[#64748B]/[0.10]',
-        tintBg20: 'bg-[#64748B]/[0.20]',
-        tintHover10: 'hover:bg-[#64748B]/[0.10]',
-        badgeBg15: 'bg-[#64748B]/[0.15]',
-        badgeText: 'text-[#64748B]',
+        area: 'Learning',
+        letter: 'L',
+        leftBorderClass: 'border-l-[3px] border-l-[#758195]',
+        tagClass: 'bg-[#758195]/[0.12] text-[#586170] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#758195]',
+        outlineChipClass: 'bg-[#758195]/[0.12] text-[#586170] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#758195',
+        rgbValues: '117, 129, 149',
+        tintBg8: 'bg-[#758195]/[0.08]',
+        tintBg10: 'bg-[#758195]/[0.10]',
+        tintBg20: 'bg-[#758195]/[0.20]',
+        tintHover10: 'hover:bg-[#758195]/[0.10]',
+        badgeBg15: 'bg-[#758195]/[0.15]',
+        badgeText: 'text-[#758195]',
       };
     case 'Career':
     default:
       return {
         area: 'Career',
         letter: 'C',
-        leftBorderClass: 'border-l-[3px] border-l-[#2563EB]',
-        tagClass: 'bg-[#2563EB]/[0.12] text-[#1D4ED8] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
-        labelClass: 'text-[#2563EB]',
-        outlineChipClass: 'bg-[#2563EB]/[0.12] text-[#1D4ED8] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-        hexColor: '#2563EB',
-        rgbValues: '37, 99, 235',
-        tintBg8: 'bg-[#2563EB]/[0.08]',
-        tintBg10: 'bg-[#2563EB]/[0.10]',
-        tintBg20: 'bg-[#2563EB]/[0.20]',
-        tintHover10: 'hover:bg-[#2563EB]/[0.10]',
-        badgeBg15: 'bg-[#2563EB]/[0.15]',
-        badgeText: 'text-[#2563EB]',
+        leftBorderClass: 'border-l-[3px] border-l-[#4F6FEA]',
+        tagClass: 'bg-[#4F6FEA]/[0.12] text-[#3B53AF] rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+        labelClass: 'text-[#4F6FEA]',
+        outlineChipClass: 'bg-[#4F6FEA]/[0.12] text-[#3B53AF] rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        hexColor: '#4F6FEA',
+        rgbValues: '79, 111, 234',
+        tintBg8: 'bg-[#4F6FEA]/[0.08]',
+        tintBg10: 'bg-[#4F6FEA]/[0.10]',
+        tintBg20: 'bg-[#4F6FEA]/[0.20]',
+        tintHover10: 'hover:bg-[#4F6FEA]/[0.10]',
+        badgeBg15: 'bg-[#4F6FEA]/[0.15]',
+        badgeText: 'text-[#4F6FEA]',
       };
   }
 }
