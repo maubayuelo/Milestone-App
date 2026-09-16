@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GanttTimeline } from './GanttTimeline';
 
@@ -123,5 +123,56 @@ describe('Gantt Phase A controls and hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Add Deliverable' })).not.toBeInTheDocument();
     await user.click(button('Capture task'));
     expect(onOpenCapture).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+// jsdom has no layout: these bounds simulate layout changes, not CSS correctness.
+describe('Gantt dependency visibility', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function geometry() {
+    let offset = 0;
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const id = this.getAttribute('data-dependency-anchor');
+      const anchors = Array.from(document.querySelectorAll('[data-dependency-anchor]'));
+      return { left: id ? 400 + offset : 100, top: id ? 150 + anchors.indexOf(this) * 39 : 50,
+        width: id ? 80 : 1240, height: id ? 16 : 1000 } as DOMRect;
+    });
+    const { container } = render(<GanttTimeline tasks={[]} onSelectTask={vi.fn()} onOpenCapture={vi.fn()} />);
+    return {
+      user: userEvent.setup(),
+      paths: () => container.querySelectorAll('path[data-dependency-target]'),
+      resize: () => { offset = 30; act(() => window.dispatchEvent(new Event('resize'))); },
+    };
+  }
+
+  it('adds and removes arrows with project and area disclosure', async () => {
+    const { user, paths } = geometry();
+    expect(paths()).toHaveLength(0);
+    await user.click(button('Expand project Komorebi Tea'));
+    expect(paths()).toHaveLength(2);
+    expect(paths()[0]).toHaveAttribute('d', 'M 380 108 C 400 108, 280 147, 300 147');
+    await user.click(button('Collapse project Komorebi Tea'));
+    expect(paths()).toHaveLength(0);
+    await user.click(button('Expand project Komorebi Tea'));
+    await user.click(button('Collapse area Career'));
+    expect(paths()).toHaveLength(0);
+    await user.click(button('Expand area Career'));
+    expect(paths()).toHaveLength(2);
+  });
+
+  it('recalculates paths on resize and removes filtered-out dependencies', async () => {
+    const { user, paths, resize } = geometry();
+    await user.click(button('Expand project Magneto Pivot'));
+    expect(paths()).toHaveLength(2);
+    const before = paths()[0].getAttribute('d');
+    resize();
+    expect(paths()[0].getAttribute('d')).not.toBe(before);
+    expect(paths()[0].getAttribute('d')).not.toContain('calc(');
+    await user.click(button(/^At-Risk Only/));
+    expect(paths()).toHaveLength(0);
+    await user.click(button(/^At-Risk Only/));
+    expect(paths()).toHaveLength(2);
   });
 });

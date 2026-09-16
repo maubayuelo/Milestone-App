@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { Task, Project } from '../types';
 import { 
   TIMELINE_PROJECTS, 
@@ -19,6 +19,7 @@ import {
   CircleDot
 } from 'lucide-react';
 import { getAreaStyle, CanonicalArea } from '../utils/areaColor';
+import { dependencyPath, type TimelineRect } from '../utils/timelineGeometry';
 
 interface GanttTimelineProps {
   projects?: Project[];
@@ -174,72 +175,52 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
     return rows;
   }, [areaTree, expandedAreas, expandedProjects]);
 
-  // Build dependency connections
-  const dependencies = useMemo(() => {
-    const deps: {
-      fromId: string;
-      toId: string;
-      fromIndex: number;
-      toIndex: number;
-      fromEndDay: number;
-      toStartDay: number;
-      isAtRisk?: boolean;
-    }[] = [];
-
-    const rowIndexMap: Record<string, number> = {};
-    visibleRows.forEach((r, idx) => {
-      rowIndexMap[r.id] = idx;
-    });
-
-    visibleRows.forEach((r) => {
-      if (r.type === 'task' && r.item && r.item.dependsOn) {
-        const predId = r.item.dependsOn;
-        const fromIndex = rowIndexMap[predId];
-        const toIndex = rowIndexMap[r.id];
-
-        if (fromIndex !== undefined && toIndex !== undefined) {
-          const predRow = visibleRows[fromIndex];
-          if (predRow.item) {
-            deps.push({
-              fromId: predId,
-              toId: r.id,
-              fromIndex,
-              toIndex,
-              fromEndDay: predRow.item.endDay,
-              toStartDay: r.item.startDay,
-              isAtRisk: r.item.atRisk || predRow.item.atRisk,
-            });
-          }
-        }
-      }
-    });
-
-    return deps;
-  }, [visibleRows]);
-
-  // Row height constants (matching DOM layout)
+  // Row heights remain layout-only; arrows measure the actual rendered anchors.
   const ROW_HEIGHT_AREA = 40;
   const ROW_HEIGHT_PROJECT = 48;
   const ROW_HEIGHT_TASK = 38;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [dependencyPaths, setDependencyPaths] = useState<{
+    id: string; d: string; isAtRisk: boolean;
+  }[]>([]);
 
-  // Calculate cumulative Y-offsets for SVG dependency arrows
-  const rowYPositions = useMemo(() => {
-    const yMap: Record<string, { top: number; center: number }> = {};
-    let currentY = 0;
-
-    visibleRows.forEach((r) => {
-      let height = ROW_HEIGHT_TASK;
-      if (r.type === 'area') height = ROW_HEIGHT_AREA;
-      else if (r.type === 'project') height = ROW_HEIGHT_PROJECT;
-
-      yMap[r.id] = {
-        top: currentY,
-        center: currentY + height / 2,
-      };
-      currentY += height;
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    const svg = svgRef.current;
+    if (!body || !svg) return;
+    const anchors = Array.from<HTMLElement>(body.querySelectorAll('[data-dependency-anchor]'));
+    const measure = () => {
+      // Batch layout reads before updating React state. Subtracting the SVG origin
+      // cancels viewport scroll offsets: paths stay in scrolling content coordinates.
+      const origin = svg.getBoundingClientRect();
+      const bounds = new Map<string, TimelineRect>();
+      anchors.forEach(anchor => bounds.set(anchor.dataset.dependencyAnchor!, anchor.getBoundingClientRect()));
+      const items = new Map<string, TimelineDeliverable>(visibleRows.flatMap(row => row.item ? [[row.id, row.item] as const] : []));
+      const next = visibleRows.flatMap(row => {
+        const target = row.item;
+        if (!target?.dependsOn) return [];
+        const source = items.get(target.dependsOn);
+        if (!source) return [];
+        const d = dependencyPath(origin, bounds.get(source.id), bounds.get(target.id));
+        return d ? [{ id: target.id, d, isAtRisk: Boolean(source.atRisk || target.atRisk) }] : [];
+      });
+      setDependencyPaths(prev => prev.length === next.length && prev.every((path, i) =>
+        path.id === next[i].id && path.d === next[i].d && path.isAtRisk === next[i].isAtRisk
+      ) ? prev : next);
+    };
+    measure();
+    // Observe the outer view as well: its container-query breakpoint can change
+    // pinned-column width even while the minimum-width chart remains unchanged.
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    [body, svg, body.closest('#view-timeline'), ...anchors].forEach(element => {
+      if (element) observer?.observe(element);
     });
-
-    return { yMap, totalHeight: currentY };
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
   }, [visibleRows]);
 
   return (
@@ -437,7 +418,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
             {/* -------------------------------------------------------------
                 C. MAIN CANVAS BODY (TREE ROWS + GANTT BARS + SVG ARROWS)
                 ------------------------------------------------------------- */}
-            <div className="flex-1 relative isolate min-h-[300px]">
+            <div ref={bodyRef} className="flex-1 relative isolate min-h-[300px]">
               
               {/* Background Day Shading Grid Layer */}
               <div className="absolute inset-0 flex pointer-events-none z-0">
@@ -484,15 +465,14 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
               </div>
 
               {/* SVG Overlay Layer for Dependency Arrows */}
-              <svg 
+              <svg ref={svgRef} aria-hidden="true"
                 className="absolute inset-0 w-full h-full pointer-events-none z-20"
-                style={{ minHeight: rowYPositions.totalHeight }}
               >
                 <defs>
                   <marker
                     id="gantt-arrow"
                     viewBox="0 0 10 10"
-                    refX="7"
+                    refX="8"
                     refY="5"
                     markerWidth="6"
                     markerHeight="6"
@@ -503,7 +483,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                   <marker
                     id="gantt-arrow-risk"
                     viewBox="0 0 10 10"
-                    refX="7"
+                    refX="8"
                     refY="5"
                     markerWidth="6"
                     markerHeight="6"
@@ -514,29 +494,19 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                 </defs>
 
                 {/* Render Curved Dependency Lines */}
-                {dependencies.map((dep, dIdx) => {
-                  const fromY = rowYPositions.yMap[dep.fromId]?.center ?? 0;
-                  const toY = rowYPositions.yMap[dep.toId]?.center ?? 0;
-
-                  // Compute X positions on timeline (each day column is 1/28 of canvas width after 380px)
-                  // Offset by left 380px
-                  const colWidthPct = 100 / totalDays;
-                  const fromXPct = (dep.fromEndDay / totalDays) * 100;
-                  const toXPct = ((dep.toStartDay - 1) / totalDays) * 100;
-
-                  return (
-                    <path
-                      key={`dep-${dIdx}`}
-                      d={`M calc(380px + ${fromXPct}%) ${fromY} C calc(380px + ${fromXPct}% + 20px) ${fromY}, calc(380px + ${toXPct}% - 20px) ${toY}, calc(380px + ${toXPct}%) ${toY}`}
-                      fill="none"
-                      stroke={dep.isAtRisk ? '#EF4444' : '#64748B'}
-                      strokeWidth="1.75"
-                      strokeDasharray={dep.isAtRisk ? '3 3' : 'none'}
-                      markerEnd={dep.isAtRisk ? 'url(#gantt-arrow-risk)' : 'url(#gantt-arrow)'}
-                      opacity={0.8}
-                    />
-                  );
-                })}
+                {dependencyPaths.map(dep => (
+                  <path
+                    key={dep.id}
+                    data-dependency-target={dep.id}
+                    d={dep.d}
+                    fill="none"
+                    stroke={dep.isAtRisk ? '#EF4444' : '#64748B'}
+                    strokeWidth="1.75"
+                    strokeDasharray={dep.isAtRisk ? '3 3' : 'none'}
+                    markerEnd={dep.isAtRisk ? 'url(#gantt-arrow-risk)' : 'url(#gantt-arrow)'}
+                    opacity={0.8}
+                  />
+                ))}
               </svg>
 
               {/* -------------------------------------------------------------
@@ -781,7 +751,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                                         className="absolute -translate-x-1/2 flex items-center gap-2 z-20 group/ms"
                                         title={`Milestone: ${del.title} (Due Day ${dEnd})`}
                                       >
-                                        <div className="w-4 h-4 rotate-45 bg-amber-500 hover:bg-amber-600 border-2 border-white shadow-md transition-transform hover:scale-125 cursor-pointer" />
+                                        <div data-dependency-anchor={del.id} className="w-4 h-4 rotate-45 bg-amber-500 hover:bg-amber-600 border-2 border-white shadow-md transition-transform hover:scale-125 cursor-pointer" />
                                         <span className="text-[10px] font-bold text-amber-800 bg-amber-100/90 border border-amber-300/60 px-1.5 py-0.2 rounded-md whitespace-nowrap hidden sm:inline">
                                           {del.title}
                                         </span>
@@ -793,6 +763,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                                           left: `${dLeftPct}%`,
                                           width: `${dWidthPct}%`,
                                         }}
+                                        data-dependency-anchor={del.id}
                                         className="absolute h-4 flex items-center z-10"
                                       >
                                         <div
