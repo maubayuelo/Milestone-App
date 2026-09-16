@@ -46,24 +46,13 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
 }) => {
   const [filterAtRiskOnly, setFilterAtRiskOnly] = useState<boolean>(false);
   
-  // Collapsible tree state:
-  // Areas expanded by default
-  const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({
-    'Career': true,
-    'Magneto': true,
-    'Shamanicca': true,
-    'Finances': true,
-    'Health & Soul': true,
-    'Personal': true,
-  });
-
-  // Projects expanded by default for primary projects
-  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({
-    'proj-komorebi': true,
-    'proj-sonder': true,
-    'proj-magneto-pivot': true,
-    'proj-stillness': true,
-  });
+  // Initialize every existing branch once; filtering does not reset user choices.
+  const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(TIMELINE_PROJECTS.map(project => [project.area, true]))
+  );
+  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(TIMELINE_PROJECTS.map(project => [project.id, false]))
+  );
 
   const timelineContainerRef = useRef<HTMLDivElement>(null);
   const totalDays = 28; // 4-week horizon (Sep 7 — Oct 4, 2026)
@@ -133,21 +122,23 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
     setExpandedProjects((prev) => ({ ...prev, [projId]: !prev[projId] }));
   };
 
-  // Expand / Collapse all
+  const allRowsExpanded = areaTree.every(area => expandedAreas[area.area]) &&
+    filteredProjects.every(project => expandedProjects[project.id]);
+
+  // Apply to the filtered tree only, retaining choices for hidden branches.
   const toggleExpandAll = () => {
-    const allProjsExpanded = filteredProjects.every((p) => expandedProjects[p.id]);
     const nextProjs: Record<string, boolean> = {};
     const nextAreas: Record<string, boolean> = {};
 
     areaTree.forEach((a) => {
-      nextAreas[a.area] = !allProjsExpanded;
+      nextAreas[a.area] = !allRowsExpanded;
     });
     filteredProjects.forEach((p) => {
-      nextProjs[p.id] = !allProjsExpanded;
+      nextProjs[p.id] = !allRowsExpanded;
     });
 
-    setExpandedAreas(nextAreas);
-    setExpandedProjects(nextProjs);
+    setExpandedAreas(prev => ({ ...prev, ...nextAreas }));
+    setExpandedProjects(prev => ({ ...prev, ...nextProjs }));
   };
 
   // Flat list of visible tree rows for dependency SVG arrow indexing
@@ -252,32 +243,29 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
   }, [visibleRows]);
 
   return (
-    <div id="view-timeline" className="flex-1 flex flex-col h-full min-h-0 min-w-0 bg-[#F7F7F8] overflow-hidden select-none text-[#1A1D23]">
+    <div id="view-timeline" className="@container/timeline flex-1 flex flex-col h-full min-h-0 min-w-0 bg-[#F7F7F8] overflow-hidden select-none text-[#1A1D23] [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-blue-600">
       
       {/* 1. Header Toolbar */}
       <header 
         id="timeline-header-bar"
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-3.5 bg-white border-b border-black/[0.04] shrink-0 shadow-2xs z-20"
+        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white border-b border-black/[0.04] shrink-0 shadow-2xs z-20"
       >
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
             <h1 className="text-base sm:text-lg font-bold text-[#1A1D23] tracking-tight">
-              Project Timeline & Capacity Gantt
+              Timeline
             </h1>
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full border border-black/[0.06] text-[#6B7280] bg-[#F7F7F8] font-semibold">
+            <span className="text-xs text-[#6B7280]">
               4-Week Horizon · Sep 7 — Oct 4, 2026
             </span>
-          </div>
-          <p className="text-xs text-[#6B7280]">
-            Collapsible Area → Project → Task tree with live daily capacity & milestone tracking.
-          </p>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+        <div className="flex min-w-0 items-center gap-3 flex-wrap">
+          <div role="group" aria-label="Timeline display" className="flex flex-wrap items-center gap-2">
           {/* At-risk filter toggle */}
           <button
-            onClick={() => setFilterAtRiskOnly(!filterAtRiskOnly)}
+            onClick={() => setFilterAtRiskOnly(prev => !prev)}
+            aria-pressed={filterAtRiskOnly}
             className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] text-xs font-semibold rounded-xl border transition-all duration-200 cursor-pointer active:scale-[0.98] ${
               filterAtRiskOnly
                 ? 'bg-red-50 border-red-200 text-red-700 shadow-2xs'
@@ -293,16 +281,18 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
             onClick={toggleExpandAll}
             className="px-3 py-1.5 min-h-[38px] text-xs font-semibold rounded-xl border border-black/[0.06] bg-white text-[#6B7280] hover:text-[#1A1D23] hover:bg-slate-50 transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
           >
-            Toggle All Rows
+            {allRowsExpanded ? 'Collapse all' : 'Expand all'}
           </button>
 
-          {/* Add deliverable */}
+          </div>
+
+          {/* Opens the existing generic task capture modal. */}
           <button
             onClick={onOpenCapture}
             className="flex items-center gap-1.5 px-3.5 py-1.5 min-h-[38px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all duration-200 cursor-pointer shadow-[0_2px_8px_rgba(37,99,235,0.25)] active:scale-[0.98]"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Deliverable</span>
+            <span>Capture task</span>
           </button>
         </div>
       </header>
@@ -312,7 +302,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
         id="timeline-sub-banner"
         className="px-6 py-2 bg-white border-b border-black/[0.04] flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 z-10"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
           <span className="font-semibold text-[#1A1D23]">
             Capacity Warning:
@@ -323,7 +313,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
         </div>
 
         {/* Legend pills */}
-        <div className="flex items-center gap-3.5 text-[11px] text-[#6B7280]">
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[11px] text-[#6B7280]">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rotate-45 bg-amber-500 border border-white shadow-2xs" />
             <span>Milestone</span>
@@ -359,10 +349,10 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                 ------------------------------------------------------------- */}
             <div className="flex items-center h-8 bg-slate-50/90 border-b border-black/[0.06] sticky top-0 z-40 shrink-0 select-none">
               {/* Pinned Left Panel Column Header: Name, Status, Due */}
-              <div className="sticky left-0 z-50 w-[380px] h-full flex items-center bg-slate-50 border-r border-black/[0.06] text-[11px] font-semibold text-[#6B7280] shrink-0 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
-                <div className="flex-1 px-4 truncate">Hierarchy (Area → Project → Task)</div>
-                <div className="w-24 px-2 text-left truncate">Status</div>
-                <div className="w-20 px-3 text-right truncate">Due</div>
+              <div className="sticky left-0 z-50 w-[min(220px,50cqw)] @3xl/timeline:w-[380px] h-full flex items-center bg-slate-50 border-r border-black/[0.06] text-[11px] font-semibold text-[#6B7280] shrink-0 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
+                <div className="flex-1 px-4 truncate">Area → Project → Deliverable</div>
+                <div className="hidden @3xl/timeline:block shrink-0 w-24 px-2 text-left truncate">Status</div>
+                <div className="hidden @3xl/timeline:block shrink-0 w-20 px-3 text-right truncate">Due</div>
               </div>
 
               {/* 4 Week Group Headers */}
@@ -392,12 +382,12 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
             {/* -------------------------------------------------------------
                 B. TOP HEADER ROW 2: 28 DAY COLUMNS + "TODAY" MARKER
                 ------------------------------------------------------------- */}
-            <div className="flex items-center h-10 bg-white border-b border-black/[0.06] sticky top-8 z-30 shrink-0 select-none">
+            <div className="flex items-center h-16 bg-white border-b border-black/[0.06] sticky top-8 z-30 shrink-0 select-none">
               {/* Pinned Left subheader */}
-              <div className="sticky left-0 z-40 w-[380px] h-full flex items-center bg-white border-r border-black/[0.06] text-[11px] text-[#9CA3AF] shrink-0 font-mono shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
+              <div className="sticky left-0 z-40 w-[min(220px,50cqw)] @3xl/timeline:w-[380px] h-full flex items-center bg-white border-r border-black/[0.06] text-[11px] text-[#9CA3AF] shrink-0 font-mono shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
                 <div className="flex-1 px-4 text-xs font-sans text-[#6B7280] font-medium">Name</div>
-                <div className="w-24 px-2 text-left">State</div>
-                <div className="w-20 px-3 text-right">Target</div>
+                <div className="hidden @3xl/timeline:block shrink-0 w-24 px-2 text-left">State</div>
+                <div className="hidden @3xl/timeline:block shrink-0 w-20 px-3 text-right">Target</div>
               </div>
 
               {/* 28 Day Columns with Day shading based on available hours */}
@@ -416,7 +406,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                   return (
                     <div
                       key={day.dayIndex}
-                      className={`h-full flex flex-col items-center justify-center transition-colors relative ${
+                      className={`h-full pt-5 flex flex-col items-center justify-center transition-colors relative ${
                         isWeekBoundary ? 'border-r border-black/[0.06]' : ''
                       } ${dayShadeClass} ${
                         day.isToday ? 'bg-blue-600/[0.08]' : ''
@@ -434,7 +424,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
 
                       {/* "Today" Badge on Day 3 */}
                       {day.isToday && (
-                        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider shadow-xs whitespace-nowrap z-30">
+                        <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs whitespace-nowrap">
                           Today
                         </div>
                       )}
@@ -447,12 +437,12 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
             {/* -------------------------------------------------------------
                 C. MAIN CANVAS BODY (TREE ROWS + GANTT BARS + SVG ARROWS)
                 ------------------------------------------------------------- */}
-            <div className="flex-1 relative min-h-[300px]">
+            <div className="flex-1 relative isolate min-h-[300px]">
               
               {/* Background Day Shading Grid Layer */}
               <div className="absolute inset-0 flex pointer-events-none z-0">
                 {/* Space matching pinned left panel */}
-                <div className="w-[380px] shrink-0 border-r border-black/[0.06]" />
+                <div className="w-[min(220px,50cqw)] @3xl/timeline:w-[380px] shrink-0 border-r border-black/[0.06]" />
 
                 {/* 28 Day Column Shading */}
                 <div className="flex-1 grid grid-cols-28 h-full divide-x divide-black/[0.03]">
@@ -473,13 +463,23 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                           isWeekBoundary ? 'border-r border-black/[0.06]' : ''
                         }`}
                       >
-                        {/* Vertical "Today" line on Day 3 */}
-                        {day.isToday && (
-                          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-blue-500/70 z-15 pointer-events-none" />
-                        )}
                       </div>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Guide above row backgrounds, below bars and pinned labels. */}
+              <div aria-hidden="true" className="absolute inset-0 flex pointer-events-none z-[5]">
+                <div className="w-[min(220px,50cqw)] @3xl/timeline:w-[380px] shrink-0" />
+                <div className="flex-1 grid grid-cols-28">
+                  {TIMELINE_DAYS_28.map(day => (
+                    <div key={day.dayIndex} className="relative">
+                      {day.isToday && (
+                        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-blue-500/70" />
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -542,7 +542,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
               {/* -------------------------------------------------------------
                   D. COLLAPSIBLE TREE ROWS (Area → Project → Task)
                   ------------------------------------------------------------- */}
-              <div className="relative z-10 flex flex-col">
+              <div className="relative flex flex-col">
                 {areaTree.map((areaNode) => {
                   const areaStyle = getAreaStyle(areaNode.area);
                   const isAreaExpanded = expandedAreas[areaNode.area];
@@ -561,43 +561,43 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                         className="flex items-center bg-slate-50/85 hover:bg-slate-100/80 transition-colors cursor-pointer group"
                       >
                         {/* Pinned Left: Area Header */}
-                        <div className="sticky left-0 z-30 w-[380px] h-full flex items-center bg-slate-50 group-hover:bg-slate-100/90 border-r border-black/[0.06] shrink-0 px-3 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
+                        <div className="sticky left-0 z-30 w-[min(220px,50cqw)] @3xl/timeline:w-[380px] h-full flex items-center bg-slate-50 group-hover:bg-slate-100/90 border-r border-black/[0.06] shrink-0 px-3 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
                           <div className="flex-1 flex items-center gap-2 min-w-0 pr-2">
                             <button
                               onClick={(e) => toggleArea(areaNode.area, e)}
-                              className="text-[#6B7280] hover:text-[#1A1D23] p-1 rounded-md hover:bg-slate-200 shrink-0"
+                              aria-label={`${isAreaExpanded ? 'Collapse' : 'Expand'} area ${areaNode.area}`}
+                              aria-expanded={isAreaExpanded}
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left rounded-md hover:bg-slate-200"
                             >
+                              <span aria-hidden="true" style={{ color: areaStyle.hexColor }} className="w-7 h-7 shrink-0 flex items-center justify-center">
                               {isAreaExpanded ? (
                                 <ChevronDown className="w-3.5 h-3.5" />
                               ) : (
                                 <ChevronRight className="w-3.5 h-3.5" />
                               )}
-                            </button>
-                            <span 
-                              style={{ backgroundColor: areaStyle.hexColor }}
-                              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" 
-                            />
+                              </span>
                             <span className="font-bold text-xs uppercase tracking-wider text-[#1A1D23] truncate">
                               {areaNode.area}
                             </span>
                             <span className="text-[11px] font-mono text-[#9CA3AF] shrink-0">
                               ({areaNode.projects.length})
                             </span>
+                            </button>
                           </div>
 
-                          <div className="w-24 px-2 text-left">
+                          <div className="hidden @3xl/timeline:block shrink-0 w-24 px-2 text-left">
                             <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-white border border-black/[0.06] text-[#475569]">
                               Domain
                             </span>
                           </div>
 
-                          <div className="w-20 px-3 text-right font-mono text-[11px] text-[#6B7280]">
+                          <div className="hidden @3xl/timeline:block shrink-0 w-20 px-3 text-right font-mono text-[11px] text-[#6B7280]">
                             {areaNode.projects.length} projs
                           </div>
                         </div>
 
                         {/* Timeline Canvas: Area Summary Bar */}
-                        <div className="flex-1 h-full relative flex items-center">
+                        <div className="flex-1 h-full relative z-10 flex items-center">
                           <div
                             style={{
                               left: `${aLeftPct}%`,
@@ -644,11 +644,13 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                               className="flex items-center hover:bg-slate-50/70 transition-colors cursor-pointer group"
                             >
                               {/* Pinned Left: Project Name, Status, Due */}
-                              <div className="sticky left-0 z-30 w-[380px] h-full flex items-center bg-white group-hover:bg-slate-50 border-r border-black/[0.06] shrink-0 pl-6 pr-3 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
+                              <div className="sticky left-0 z-30 w-[min(220px,50cqw)] @3xl/timeline:w-[380px] h-full flex items-center bg-white group-hover:bg-slate-50 border-r border-black/[0.06] shrink-0 pl-8 pr-3 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
                                 <div className="flex-1 flex items-center gap-2 min-w-0 pr-2">
                                   <button
                                     onClick={(e) => toggleProject(p.id, e)}
-                                    className="text-[#6B7280] hover:text-[#1A1D23] p-1 rounded-md hover:bg-slate-100 shrink-0"
+                                    aria-label={`${isProjExpanded ? 'Collapse' : 'Expand'} project ${p.name}`}
+                                    aria-expanded={isProjExpanded}
+                                    className="text-[#6B7280] hover:text-[#1A1D23] w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 shrink-0"
                                   >
                                     {isProjExpanded ? (
                                       <ChevronDown className="w-3.5 h-3.5" />
@@ -657,20 +659,20 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                                     )}
                                   </button>
 
-                                  <div className="flex flex-col min-w-0">
-                                    <div className="flex items-center gap-1.5">
+                                  <button type="button" onClick={(e) => { e.stopPropagation(); onSelectProject?.(p.id); }} className="flex flex-col min-w-0 text-left" aria-label={`Select project ${p.name}`}>
+                                    <span className="flex min-w-0 max-w-full items-center gap-1.5">
                                       <span className="text-[13px] font-bold text-[#1A1D23] truncate group-hover:text-blue-600 transition-colors">
                                         {p.name}
                                       </span>
-                                    </div>
+                                    </span>
                                     <span className="text-[11px] text-[#6B7280] truncate leading-tight">
                                       {p.client}
                                     </span>
-                                  </div>
+                                  </button>
                                 </div>
 
                                 {/* Status Column */}
-                                <div className="w-24 px-2 text-left">
+                                <div className="hidden @3xl/timeline:block shrink-0 w-24 px-2 text-left">
                                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                                     p.atRisk
                                       ? 'bg-red-50 text-red-700 border-red-200'
@@ -681,13 +683,13 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                                 </div>
 
                                 {/* Due Column */}
-                                <div className="w-20 px-3 text-right font-mono text-[11px] font-semibold text-[#1A1D23]">
+                                <div className="hidden @3xl/timeline:block shrink-0 w-20 px-3 text-right font-mono text-[11px] font-semibold text-[#1A1D23]">
                                   {p.deadlineDateStr}
                                 </div>
                               </div>
 
                               {/* Timeline Canvas: Project Summary Bar */}
-                              <div className="flex-1 h-full relative flex items-center">
+                              <div className="flex-1 h-full relative z-10 flex items-center">
                                 {/* Project Bar */}
                                 <div
                                   style={{
@@ -735,20 +737,22 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                                   className="flex items-center hover:bg-blue-50/40 transition-colors cursor-pointer group bg-slate-50/40"
                                 >
                                   {/* Pinned Left: Deliverable Title, Status, Due */}
-                                  <div className="sticky left-0 z-30 w-[380px] h-full flex items-center bg-slate-50/95 group-hover:bg-blue-50/70 border-r border-black/[0.06] shrink-0 pl-12 pr-3 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
+                                  <div className="sticky left-0 z-30 w-[min(220px,50cqw)] @3xl/timeline:w-[380px] h-full flex items-center bg-slate-50/95 group-hover:bg-blue-50/70 border-r border-black/[0.06] shrink-0 pl-[52px] pr-3 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
                                     <div className="flex-1 flex items-center gap-2 min-w-0 pr-2">
+                                      <span aria-hidden="true" className="w-7 h-7 shrink-0 flex items-center justify-center">
                                       {del.isMilestone ? (
                                         <div className="w-3.5 h-3.5 rotate-45 bg-amber-500 border border-white shrink-0 shadow-2xs" />
                                       ) : (
                                         <CircleDot className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                       )}
-                                      <span className="text-xs text-[#374151] truncate group-hover:text-[#1A1D23]">
-                                        {del.title}
                                       </span>
+                                      <button type="button" aria-label={`Open deliverable ${del.title}`} className="text-left text-xs text-[#374151] truncate group-hover:text-[#1A1D23]">
+                                        {del.title}
+                                      </button>
                                     </div>
 
                                     {/* Task Status */}
-                                    <div className="w-24 px-2 text-left">
+                                    <div className="hidden @3xl/timeline:block shrink-0 w-24 px-2 text-left">
                                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                                         del.status === 'done'
                                           ? 'bg-emerald-100 text-emerald-800'
@@ -761,13 +765,13 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                                     </div>
 
                                     {/* Task Due */}
-                                    <div className="w-20 px-3 text-right font-mono text-[11px] text-[#6B7280]">
+                                    <div className="hidden @3xl/timeline:block shrink-0 w-20 px-3 text-right font-mono text-[11px] text-[#6B7280]">
                                       {del.dueStr}
                                     </div>
                                   </div>
 
                                   {/* Timeline Canvas: Task Bar / Milestone Diamond */}
-                                  <div className="flex-1 h-full relative flex items-center">
+                                  <div className="flex-1 h-full relative z-10 flex items-center">
                                     {/* Milestone Diamond Marker */}
                                     {del.isMilestone ? (
                                       <div
@@ -838,8 +842,8 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
             >
               <div className="flex items-stretch h-14">
                 {/* Left panel capacity label */}
-                <div className="sticky left-0 z-50 w-[380px] h-full flex flex-col justify-center px-4 bg-slate-100 border-r border-black/[0.08] shrink-0 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
-                  <div className="flex items-center justify-between">
+                <div className="sticky left-0 z-50 w-[min(220px,50cqw)] @3xl/timeline:w-[380px] h-full flex flex-col justify-center px-4 bg-slate-100 border-r border-black/[0.08] shrink-0 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2">
                     <span className="text-xs font-bold text-[#1A1D23] uppercase tracking-[0.04em] flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-blue-600" />
                       <span>Daily Capacity Lane</span>
@@ -848,7 +852,7 @@ export const GanttTimeline: React.FC<GanttTimelineProps> = ({
                       Free vs. Committed
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#6B7280] mt-0.5">
+                  <span className="hidden @3xl/timeline:block text-[10px] text-[#6B7280] mt-0.5">
                     Day shading highlights buffer shortage &lt;1.5h
                   </span>
                 </div>
